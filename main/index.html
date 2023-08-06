@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Drawn Roads</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map {
+            height: 500px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        function drawMap(points) {
+            var map = L.map('map').setView([points[0].location.latitude, points[0].location.longitude], 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            var latlngs = points.map((point) => [point.location.latitude, point.location.longitude]);
+            L.polyline(latlngs, { color: 'blue' }).addTo(map);
+        }
+
+        // Replace this with the actual snapped points data received from the Go backend
+        var snappedPoints = [
+            {
+                location: {
+                    latitude: -35.278004899930188,
+                    longitude: 149.129531998742
+                }
+            },
+            {
+                location: {
+                    latitude: -35.2784195,
+                    longitude: 149.12946589999999
+                }
+            },
+            // Add more points as needed
+        ];
+
+        drawMap(snappedPoints);
+    </script>
+</body>
+</html>
