@@ -23,8 +23,11 @@ type SnappedPoint struct {
 	Location Location `json:"location"`
 }
 
-type SnapToRoadsResponse struct {
-	Points []SnappedPoint `json:"snappedPoints"`
+type GeoJSONFeature struct {
+	Geometry struct {
+		Type        string        `json:"type"`
+		Coordinates [][][]float64 `json:"coordinates"`
+	} `json:"geometry"`
 }
 
 func main() {
@@ -41,34 +44,63 @@ func main() {
 		return
 	}
 
-	// Replace these coordinates with your desired points
-	coordinates := "-35.27801,149.12958|-35.28032,149.12907|-35.28099,149.12929|-35.28144,149.12984|-35.28194,149.13003|-35.28282,149.12956|-35.28302,149.12881|-35.28473,149.12836"
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Read the contents of index.html file
+		indexHTML, err := ioutil.ReadFile("index.html")
+		if err != nil {
+			http.Error(w, "Error reading index.html", http.StatusInternalServerError)
+			return
+		}
 
-	// Make the API request
-	resp, err := http.Get(fmt.Sprintf("%s?path=%s&interpolate=true&key=%s", baseURL, coordinates, apiKey))
-	if err != nil {
-		fmt.Println("Error making API request:", err)
-		return
-	}
-	defer resp.Body.Close()
+		// Serve the index.html file as the response
+		w.Header().Set("Content-Type", "text/html")
+		w.Write(indexHTML)
+	})
 
-	// Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response:", err)
-		return
-	}
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
-	// Parse the response JSON
-	var snapToRoadsResp SnapToRoadsResponse
-	err = json.Unmarshal(body, &snapToRoadsResp)
-	if err != nil {
-		fmt.Println("Error parsing JSON:", err)
-		return
-	}
+	http.HandleFunc("/get_points", func(w http.ResponseWriter, r *http.Request) {
+		// Load and parse your Bristol GeoJSON file
+		bristolGeoJSON, err := ioutil.ReadFile("bristol.geojson")
+		if err != nil {
+			http.Error(w, "Error reading Bristol GeoJSON file", http.StatusInternalServerError)
+			fmt.Println("Error reading Bristol GeoJSON file:", err)
+			return
+		}
 
-	// Extract the snapped points and print them
-	for _, point := range snapToRoadsResp.Points {
-		fmt.Printf("Lat: %.6f, Lng: %.6f\n", point.Location.Lat, point.Location.Lng)
-	}
+		// Parse the GeoJSON data into a struct
+		var geoJSON struct {
+			Features []GeoJSONFeature `json:"features"`
+		}
+		if err := json.Unmarshal(bristolGeoJSON, &geoJSON); err != nil {
+			http.Error(w, "Error parsing GeoJSON", http.StatusInternalServerError)
+			fmt.Println("Error parsing GeoJSON:", err)
+			return
+		}
+
+		// Extract the coordinates and send them to the front end
+		var coordinates []Location
+		for _, feature := range geoJSON.Features {
+			for _, coordsList := range feature.Geometry.Coordinates {
+				for _, coords := range coordsList {
+					location := Location{Lat: coords[1], Lng: coords[0]}
+					coordinates = append(coordinates, location)
+				}
+			}
+		}
+
+		// Convert coordinates to JSON and send to front end
+		coordinatesJSON, err := json.Marshal(coordinates)
+		if err != nil {
+			http.Error(w, "Error encoding coordinates to JSON", http.StatusInternalServerError)
+			fmt.Println("Error encoding coordinates to JSON:", err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(coordinatesJSON)
+	})
+
+	fmt.Println("Server started at http://localhost:8080")
+	http.ListenAndServe(":8080", nil)
 }

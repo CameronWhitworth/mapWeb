@@ -14,35 +14,34 @@
 
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
+        // Make sure to use the correct URL based on your server setup
+        const getPointsURL = '/get_points';
+
         function drawMap(points) {
-            var map = L.map('map').setView([points[0].location.latitude, points[0].location.longitude], 13);
+            if (points.length === 0) {
+                console.error('No points received from the server');
+                return;
+            }
+
+            var map = L.map('map').setView([points[0].latitude, points[0].longitude], 13);
 
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
             }).addTo(map);
 
-            var latlngs = points.map((point) => [point.location.latitude, point.location.longitude]);
-            L.polyline(latlngs, { color: 'blue' }).addTo(map);
+            points.forEach((point) => {
+                L.marker([point.latitude, point.longitude]).addTo(map);
+            });
         }
 
-        // Replace this with the actual snapped points data received from the Go backend
-        var snappedPoints = [
-            {
-                location: {
-                    latitude: -35.278004899930188,
-                    longitude: 149.129531998742
-                }
-            },
-            {
-                location: {
-                    latitude: -35.2784195,
-                    longitude: 149.12946589999999
-                }
-            },
-            // Add more points as needed
-        ];
-
-        drawMap(snappedPoints);
+        fetch(getPointsURL)
+            .then((response) => response.json())
+            .then((data) => {
+                console.log('Data received from the server:', data);
+                // Draw the map with the coordinates received from the server
+                drawMap(data);
+            })
+            .catch((error) => console.error('Error fetching data:', error));
     </script>
 </body>
 </html>
