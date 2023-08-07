@@ -14,6 +14,8 @@ type Location struct {
 	Lng float64 `json:"longitude"`
 }
 
+type Street []Location
+
 type GeoJSONFeature struct {
 	Geometry struct {
 		Type        string        `json:"type"`
@@ -22,6 +24,7 @@ type GeoJSONFeature struct {
 }
 
 func main() {
+	// Load environment variables from .env file
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Error loading .env file:", err)
@@ -29,19 +32,21 @@ func main() {
 	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Read the contents of index.html file
 		indexHTML, err := ioutil.ReadFile("index.html")
 		if err != nil {
 			http.Error(w, "Error reading index.html", http.StatusInternalServerError)
 			return
 		}
 
+		// Serve the index.html file as the response
 		w.Header().Set("Content-Type", "text/html")
 		w.Write(indexHTML)
 	})
 
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 
-	http.HandleFunc("/get_points", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/get_streets", func(w http.ResponseWriter, r *http.Request) {
 		// Load and parse your Bristol GeoJSON file
 		bristolGeoJSON, err := ioutil.ReadFile("bristol.geojson")
 		if err != nil {
@@ -60,10 +65,10 @@ func main() {
 			return
 		}
 
-		// Organize the coordinates into streets
-		var streets [][]Location
+		// Extract streets and send them to the front end
+		var streets []Street
 		for _, feature := range geoJSON.Features {
-			var street []Location
+			var street Street
 			for _, coordsList := range feature.Geometry.Coordinates {
 				for _, coords := range coordsList {
 					location := Location{Lat: coords[1], Lng: coords[0]}

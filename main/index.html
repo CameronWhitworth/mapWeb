@@ -19,7 +19,7 @@
 
     <script>
         // Make sure to use the correct URL based on your server setup
-        const getPointsURL = '/get_points';
+        const getStreetsURL = '/get_streets';
 
         function drawCanvas(streets) {
             if (streets.length === 0) {
@@ -35,9 +35,13 @@
 
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Calculate the center point based on the first street's first point
+            const centerLat = streets[0][0].latitude;
+            const centerLon = streets[0][0].longitude;
+
             // Map latitude and longitude to canvas coordinates
-            const latToY = (lat) => canvas.height - (lat - 51.3) * (canvas.height / 0.3);
-            const lonToX = (lon) => (lon + 2.7) * (canvas.width / 0.3);
+            const latToY = (lat) => (centerLat - lat) * (canvas.height / 0.3) + canvas.height / 2;
+            const lonToX = (lon) => (lon - centerLon) * (canvas.width / 0.3) + canvas.width / 2;
 
             streets.forEach((street) => {
                 // Start drawing
@@ -55,7 +59,7 @@
             });
         }
 
-        fetch(getPointsURL)
+        fetch(getStreetsURL)
             .then((response) => response.json())
             .then((data) => {
                 console.log('Data received from the server:', data);
