@@ -2,35 +2,56 @@
 <html>
 <head>
     <title>Drawn Roads</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <style>
-        #map {
-            height: 500px;
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div id="map"></div>
+    <canvas id="canvas"></canvas>
 
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
         // Make sure to use the correct URL based on your server setup
         const getPointsURL = '/get_points';
 
-        function drawMap(points) {
-            if (points.length === 0) {
-                console.error('No points received from the server');
+        function drawCanvas(streets) {
+            if (streets.length === 0) {
+                console.error('No streets received from the server');
                 return;
             }
 
-            var map = L.map('map').setView([points[0].latitude, points[0].longitude], 13);
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            }).addTo(map);
+            canvas.width = window.innerWidth; // Set canvas width to match window width
+            canvas.height = window.innerHeight; // Set canvas height to match window height
 
-            points.forEach((point) => {
-                L.marker([point.latitude, point.longitude]).addTo(map);
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Map latitude and longitude to canvas coordinates
+            const latToY = (lat) => canvas.height - (lat - 51.3) * (canvas.height / 0.3);
+            const lonToX = (lon) => (lon + 2.7) * (canvas.width / 0.3);
+
+            streets.forEach((street) => {
+                // Start drawing
+                ctx.beginPath();
+                ctx.moveTo(lonToX(street[0].longitude), latToY(street[0].latitude));
+
+                street.slice(1).forEach((point) => {
+                    ctx.lineTo(lonToX(point.longitude), latToY(point.latitude));
+                });
+
+                // Set line style and draw
+                ctx.strokeStyle = 'blue';
+                ctx.lineWidth = 2;
+                ctx.stroke();
             });
         }
 
@@ -38,8 +59,8 @@
             .then((response) => response.json())
             .then((data) => {
                 console.log('Data received from the server:', data);
-                // Draw the map with the coordinates received from the server
-                drawMap(data);
+                // Draw the lines on the canvas using latitude and longitude points
+                drawCanvas(data);
             })
             .catch((error) => console.error('Error fetching data:', error));
     </script>

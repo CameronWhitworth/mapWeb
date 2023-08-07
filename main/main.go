@@ -5,22 +5,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
 
 	"github.com/joho/godotenv"
-)
-
-const (
-	baseURL = "https://roads.googleapis.com/v1/snapToRoads"
 )
 
 type Location struct {
 	Lat float64 `json:"latitude"`
 	Lng float64 `json:"longitude"`
-}
-
-type SnappedPoint struct {
-	Location Location `json:"location"`
 }
 
 type GeoJSONFeature struct {
@@ -31,28 +22,19 @@ type GeoJSONFeature struct {
 }
 
 func main() {
-	// Load environment variables from .env file
 	err := godotenv.Load()
 	if err != nil {
 		fmt.Println("Error loading .env file:", err)
 		return
 	}
 
-	apiKey := os.Getenv("GOOGLE_MAPS_API_KEY")
-	if apiKey == "" {
-		fmt.Println("GOOGLE_MAPS_API_KEY not set in the environment")
-		return
-	}
-
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Read the contents of index.html file
 		indexHTML, err := ioutil.ReadFile("index.html")
 		if err != nil {
 			http.Error(w, "Error reading index.html", http.StatusInternalServerError)
 			return
 		}
 
-		// Serve the index.html file as the response
 		w.Header().Set("Content-Type", "text/html")
 		w.Write(indexHTML)
 	})
@@ -78,27 +60,29 @@ func main() {
 			return
 		}
 
-		// Extract the coordinates and send them to the front end
-		var coordinates []Location
+		// Organize the coordinates into streets
+		var streets [][]Location
 		for _, feature := range geoJSON.Features {
+			var street []Location
 			for _, coordsList := range feature.Geometry.Coordinates {
 				for _, coords := range coordsList {
 					location := Location{Lat: coords[1], Lng: coords[0]}
-					coordinates = append(coordinates, location)
+					street = append(street, location)
 				}
 			}
+			streets = append(streets, street)
 		}
 
-		// Convert coordinates to JSON and send to front end
-		coordinatesJSON, err := json.Marshal(coordinates)
+		// Convert streets to JSON and send to front end
+		streetsJSON, err := json.Marshal(streets)
 		if err != nil {
-			http.Error(w, "Error encoding coordinates to JSON", http.StatusInternalServerError)
-			fmt.Println("Error encoding coordinates to JSON:", err)
+			http.Error(w, "Error encoding streets to JSON", http.StatusInternalServerError)
+			fmt.Println("Error encoding streets to JSON:", err)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(coordinatesJSON)
+		w.Write(streetsJSON)
 	})
 
 	fmt.Println("Server started at http://localhost:8080")
